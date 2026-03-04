@@ -1,30 +1,40 @@
 <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 pt-5 sm:px-6 sm:pt-6 dark:border-slate-800 dark:bg-white/[0.03] shadow-sm">
     <div class="flex items-center justify-between">
         <h3 class="text-lg font-semibold text-slate-800 dark:text-white/90">
-            Monthly Sales
+            Pembayaran Lunas Bulanan
         </h3>
         <x-common.dropdown-menu />
     </div>
 
-    <div class="max-w-full overflow-x-auto custom-scrollbar mt-4">
-        <div id="chartOne" class="-ml-5 h-full min-w-[690px] pl-2 xl:min-w-full"></div>
+    <div class="max-w-full mt-4">
+        <div id="chartOne" class="h-44 w-full"></div>
     </div>
 
     @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const chartElement = document.querySelector('#chartOne');
             if (chartElement) {
+                let labels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                let paid = [];
+                try {
+                    const res = await fetch('{{ route('dashboard.charts.payments') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (res.ok) {
+                        const data = await res.json();
+                        labels = data.labels || labels;
+                        paid = data.paid || [];
+                    }
+                } catch (e) {}
                 const chartOneOptions = {
                     series: [{
-                        name: "Sales",
-                        data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
+                        name: "Lunas",
+                        data: paid,
                     }, ],
                     colors: ["#465fff"],
                     chart: {
                         fontFamily: "Outfit, sans-serif",
                         type: "bar",
-                        height: 180,
+                        height: 140,
                         toolbar: {
                             show: false,
                         },
@@ -32,8 +42,8 @@
                     plotOptions: {
                         bar: {
                             horizontal: false,
-                            columnWidth: "39%",
-                            borderRadius: 5,
+                            columnWidth: "12%",
+                            borderRadius: 3,
                             borderRadiusApplication: "end",
                         },
                     },
@@ -42,13 +52,11 @@
                     },
                     stroke: {
                         show: true,
-                        width: 4,
+                        width: 2,
                         colors: ["transparent"],
                     },
                     xaxis: {
-                        categories: [
-                            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-                        ],
+                        categories: labels,
                         axisBorder: {
                             show: false,
                         },
@@ -79,14 +87,8 @@
                         opacity: 1,
                     },
                     tooltip: {
-                        x: {
-                            show: false,
-                        },
-                        y: {
-                            formatter: function(val) {
-                                return val;
-                            },
-                        },
+                        x: { show: false },
+                        y: { formatter: function(val){ return 'Rp ' + new Intl.NumberFormat('id-ID').format(val); } },
                     },
                 };
 
@@ -97,5 +99,3 @@
     </script>
     @endpush
 </div>
-
-

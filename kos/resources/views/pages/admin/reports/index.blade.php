@@ -13,6 +13,8 @@
                 <div class="flex justify-between"><span>Total Penghuni</span><span class="font-bold">{{ $summary['tenants'] }}</span></div>
                 <div class="flex justify-between"><span>Bayar Lunas</span><span class="font-bold">{{ $summary['payments_paid'] }}</span></div>
                 <div class="flex justify-between"><span>Belum Bayar</span><span class="font-bold">{{ $summary['payments_unpaid'] }}</span></div>
+                <div class="flex justify-between"><span>Total Pemasukan</span><span class="font-bold">Rp {{ number_format($summary['revenue_total'],0,',','.') }}</span></div>
+                <div class="flex justify-between"><span>Pemasukan Bulan Ini</span><span class="font-bold">Rp {{ number_format($summary['revenue_month'],0,',','.') }}</span></div>
             </div>
         </div>
 

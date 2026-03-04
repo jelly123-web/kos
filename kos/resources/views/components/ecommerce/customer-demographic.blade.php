@@ -3,16 +3,16 @@
 @php
     $defaultCountries = [
         [
-            'name' => 'USA',
-            'flag' => './images/country/country-01.svg',
-            'customers' => '2,379',
-            'percentage' => 79
+            'name' => 'Jakawarna',
+            'flag' => null,
+            'customers' => '1,240',
+            'percentage' => 68
         ],
         [
-            'name' => 'France',
-            'flag' => './images/country/country-02.svg',
-            'customers' => '589',
-            'percentage' => 23
+            'name' => 'Jakala',
+            'flag' => null,
+            'customers' => '580',
+            'percentage' => 32
         ],
     ];
     
@@ -23,7 +23,7 @@
     <div class="flex justify-between">
         <div>
             <h3 class="text-lg font-bold text-slate-800 dark:text-white/90">
-                Customers Demographic
+                Sebaran Lokasi
             </h3>
             <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">
                 Number of customer based on country
@@ -88,9 +88,8 @@
                         },
                     },
                     markers: [
-                        { name: "Egypt", coords: [26.8206, 30.8025] },
-                        { name: "United Kingdom", coords: [55.3781, 3.436] },
-                        { name: "United States", coords: [37.0902, -95.7129] },
+                        { name: "Jakawarna", coords: [-6.2, 106.8] },
+                        { name: "Jakala", coords: [-7.0, 110.4] },
                     ],
                     markerStyle: {
                         initial: {
@@ -104,7 +103,7 @@
                             fillOpacity: 1,
                         },
                     },
-                });
+                }); try { mapOne.setFocus({ region: 'ID', animate: true }); } catch (e) {}
             }
         });
     </script>

@@ -2,10 +2,10 @@
     <div class="flex flex-col gap-5 mb-6 sm:flex-row sm:justify-between items-start">
         <div class="w-full">
             <h3 class="text-lg font-semibold text-slate-800 dark:text-white/90">
-                Statistics
+                Statistik Pemasukan (Lunas)
             </h3>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Target you’ve set for each month
+                Total pemasukan dari pembayaran penghuni per bulan
             </p>
         </div>
 
@@ -53,34 +53,36 @@
             </div>
         </div>
     </div>
-    <div class="max-w-full overflow-x-auto custom-scrollbar">
-        <div id="chartThree" class="-ml-4 min-w-[700px] pl-2 xl:min-w-full"></div>
+    <div class="max-w-full">
+        <div id="chartThree" class="w-full h-56"></div>
     </div>
 
     @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const chartElement = document.querySelector('#chartThree');
             if (chartElement) {
+                let labels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                let paid = [];
+                try {
+                    const res = await fetch('{{ route('dashboard.charts.payments') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (res.ok) {
+                        const data = await res.json();
+                        labels = data.labels || labels;
+                        paid = data.paid || [];
+                    }
+                } catch (e) {}
                 const chartThreeOptions = {
-                    series: [{
-                        name: "Sales",
-                        data: [180, 190, 170, 160, 175, 165, 170, 205, 230, 210, 240, 235],
-                    },
-                    {
-                        name: "Revenue",
-                        data: [40, 30, 50, 40, 55, 40, 70, 100, 110, 120, 150, 140],
-                    },
-                    ],
+                    series: [{ name: "Lunas", data: paid }],
                     legend: {
-                        show: false,
+                        show: true,
                         position: "top",
                         horizontalAlign: "left",
                     },
-                    colors: ["#465FFF", "#9CB9FF"],
+                    colors: ["#10B981"],
                     chart: {
                         fontFamily: "Outfit, sans-serif",
-                        height: 310,
+                        height: 220,
                         type: "area",
                         toolbar: {
                             show: false,
@@ -95,7 +97,7 @@
                     },
                     stroke: {
                         curve: "straight",
-                        width: ["2", "2"],
+                        width: ["1.5", "1.5"],
                     },
                     markers: {
                         size: 0,
@@ -126,9 +128,7 @@
                     },
                     xaxis: {
                         type: "category",
-                        categories: [
-                            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-                        ],
+                        categories: labels,
                         axisBorder: {
                             show: false,
                         },
@@ -138,6 +138,7 @@
                         tooltip: false,
                     },
                     yaxis: {
+                        labels: { formatter: function(val){ return 'Rp ' + new Intl.NumberFormat('id-ID').format(val); } },
                         title: {
                             style: {
                                 fontSize: "0px",
@@ -153,4 +154,3 @@
     </script>
     @endpush
 </div>
-

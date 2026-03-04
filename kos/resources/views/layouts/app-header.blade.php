@@ -59,7 +59,7 @@
                     </div>
                     <div class="max-h-80 overflow-y-auto">
                         <div class="px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 cursor-pointer border-b border-slate-50 dark:border-slate-800 last:border-0">
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Welcome to TailAdmin!</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Welcome to {{ \App\Models\Setting::getValue('app_name', 'Kos Management System') }}!</p>
                             <p class="text-xs text-slate-400 mt-1">2 minutes ago</p>
                         </div>
                     </div>

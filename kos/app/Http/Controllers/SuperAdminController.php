@@ -7,6 +7,8 @@ use App\Models\Message;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class SuperAdminController extends Controller
 {
@@ -117,19 +119,138 @@ class SuperAdminController extends Controller
         return view('pages.super-admin.activity-log');
     }
 
+    public function maintenance()
+    {
+        $logPreview = '';
+        try {
+            $path = storage_path('logs/laravel.log');
+            if (file_exists($path)) {
+                $lines = @file($path);
+                $logPreview = implode('', array_slice($lines, -150));
+            }
+        } catch (\Throwable $e) {}
+        return view('pages.super-admin.maintenance.index', compact('logPreview'));
+    }
+
+    public function backup()
+    {
+        $dump = [
+            'properties' => \App\Models\Property::all(),
+            'rooms' => \App\Models\Room::all(),
+            'tenants' => \App\Models\Tenant::all(),
+            'payments' => \App\Models\Payment::all(),
+            'issues' => \App\Models\IssueReport::all(),
+            'inspections' => \App\Models\RoomInspection::all(),
+            'settings' => \App\Models\Setting::all(),
+        ];
+        $json = json_encode($dump, JSON_PRETTY_PRINT);
+        $filename = 'backup_'.now()->format('Ymd_His').'.json';
+        return response($json, 200, [
+            'Content-Type' => 'application/json',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    public function restore(Request $request)
+    {
+        $request->validate([
+            'backup_file' => 'required|file|mimetypes:application/json,text/plain',
+        ]);
+        $content = file_get_contents($request->file('backup_file')->getRealPath());
+        $data = json_decode($content, true);
+        if (!is_array($data)) {
+            return redirect()->back()->with('error', 'File backup tidak valid.');
+        }
+        DB::transaction(function () use ($data) {
+            foreach (['properties','rooms','tenants','payments','issues','inspections','settings'] as $key) {
+                if (!empty($data[$key]) && is_array($data[$key])) {
+                    foreach ($data[$key] as $row) {
+                        $model = match ($key) {
+                            'properties' => new \App\Models\Property(),
+                            'rooms' => new \App\Models\Room(),
+                            'tenants' => new \App\Models\Tenant(),
+                            'payments' => new \App\Models\Payment(),
+                            'issues' => new \App\Models\IssueReport(),
+                            'inspections' => new \App\Models\RoomInspection(),
+                            'settings' => new \App\Models\Setting(),
+                        };
+                        $attrs = $row;
+                        unset($attrs['id']);
+                        $model->fill($attrs);
+                        $model->save();
+                    }
+                }
+            }
+        });
+        return redirect()->back()->with('success', 'Data berhasil direstore.');
+    }
+
+    public function systemUpdate()
+    {
+        return redirect()->back()->with('success', 'Sistem diperbarui (placeholder).');
+    }
+
     public function reports()
     {
-        // Mock data for reports
+        $nf = fn ($n) => 'Rp '.number_format((int) $n, 0, ',', '.');
+
+        $totalRevenue = \App\Models\Payment::where('status', 'paid')->sum('amount');
+        $revenueThisMonth = \App\Models\Payment::where('status', 'paid')
+            ->whereMonth('paid_at', now()->month)
+            ->whereYear('paid_at', now()->year)
+            ->sum('amount');
+
+        $roomsTotal = \App\Models\Room::count();
+        $roomsOccupied = \App\Models\Room::where('status', 'occupied')->count();
+        $occupancyRate = $roomsTotal > 0 ? round(($roomsOccupied / $roomsTotal) * 100) : 0;
+
+        $activeProperties = \App\Models\Property::count();
+
+        $byProperty = \App\Models\Payment::select(
+                \DB::raw('rooms.property_id as pid'),
+                \DB::raw('SUM(payments.amount) as revenue')
+            )
+            ->join('rooms', 'payments.room_id', '=', 'rooms.id')
+            ->where('payments.status', 'paid')
+            ->groupBy('pid')
+            ->orderByDesc('revenue')
+            ->limit(5)
+            ->get();
+
+        $topProperties = [];
+        foreach ($byProperty as $row) {
+            $prop = \App\Models\Property::find($row->pid);
+            if (!$prop) continue;
+            $rt = \App\Models\Room::where('property_id', $prop->id)->count();
+            $ro = \App\Models\Room::where('property_id', $prop->id)->where('status', 'occupied')->count();
+            $occ = $rt > 0 ? round(($ro / $rt) * 100) : 0;
+            $topProperties[] = [
+                'name' => $prop->name,
+                'revenue' => $nf($row->revenue ?? 0),
+                'occupancy' => $occ.'%',
+            ];
+        }
+
+        if (empty($topProperties)) {
+            $fallback = \App\Models\Property::orderBy('name')->limit(3)->get();
+            foreach ($fallback as $prop) {
+                $rt = \App\Models\Room::where('property_id', $prop->id)->count();
+                $ro = \App\Models\Room::where('property_id', $prop->id)->where('status', 'occupied')->count();
+                $occ = $rt > 0 ? round(($ro / $rt) * 100) : 0;
+                $topProperties[] = [
+                    'name' => $prop->name,
+                    'revenue' => $nf(0),
+                    'occupancy' => $occ.'%',
+                ];
+            }
+        }
+
         $reports = [
-            'total_revenue' => 'Rp 158.400.000',
-            'revenue_this_month' => 'Rp 24.500.000',
-            'occupancy_rate' => '88%',
-            'active_properties' => 12,
-            'top_properties' => [
-                ['name' => 'Kos Melati', 'revenue' => 'Rp 45.000.000', 'occupancy' => '95%'],
-                ['name' => 'Kos Mawar', 'revenue' => 'Rp 32.500.000', 'occupancy' => '100%'],
-                ['name' => 'Kos Anggrek', 'revenue' => 'Rp 28.900.000', 'occupancy' => '80%'],
-            ]
+            'total_revenue' => $nf($totalRevenue),
+            'revenue_this_month' => $nf($revenueThisMonth),
+            'occupancy_rate' => $occupancyRate.'%',
+            'active_properties' => $activeProperties,
+            'top_properties' => $topProperties,
         ];
 
         return view('pages.super-admin.reports', compact('reports'));
@@ -148,7 +269,7 @@ class SuperAdminController extends Controller
     public function chat(Request $request)
     {
         $contacts = User::where('id', '!=', auth()->id())
-            ->whereIn('role', ['admin', 'owner', 'staff'])
+            ->whereIn('role', ['admin', 'owner', 'staff', 'manager'])
             ->get();
 
         $unread = Message::select('sender_id', \DB::raw('COUNT(*) as c'))

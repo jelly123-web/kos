@@ -15,6 +15,7 @@
                         <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-slate-400">Nama</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-slate-400">Harga</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-slate-400">Status</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-slate-400">Kondisi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
@@ -24,7 +25,18 @@
                         <td class="px-6 py-4">{{ $room->name }}</td>
                         <td class="px-6 py-4">{{ $room->price ? 'Rp '.number_format($room->price,0,',','.') : '-' }}</td>
                         <td class="px-6 py-4">
-                            <span class="px-2 py-1 rounded-full text-xs font-bold {{ $room->status === 'empty' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700' }}">{{ $room->status }}</span>
+                            @php
+                                $slabel = $room->status === 'empty' ? 'Kosong' : ($room->status === 'occupied' ? 'Terisi' : 'Maintenance');
+                                $sclass = $room->status === 'empty' ? 'bg-green-100 text-green-700' : ($room->status === 'occupied' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700');
+                            @endphp
+                            <span class="px-2 py-1 rounded-full text-xs font-bold {{ $sclass }}">{{ $slabel }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            @php
+                                $clabel = $room->condition === 'good' ? 'Baik' : ($room->condition === 'damaged' ? 'Rusak' : 'Perlu Perbaikan');
+                                $cclass = $room->condition === 'good' ? 'bg-green-50 text-green-700' : ($room->condition === 'damaged' ? 'bg-red-50 text-red-700' : 'bg-orange-50 text-orange-700');
+                            @endphp
+                            <span class="px-2 py-1 rounded-full text-xs font-bold {{ $cclass }}">{{ $clabel }}</span>
                         </td>
                     </tr>
                     @endforeach

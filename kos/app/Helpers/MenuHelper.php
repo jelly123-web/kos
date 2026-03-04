@@ -21,6 +21,11 @@ class MenuHelper
                     'path' => route('super-admin.users'),
                 ],
                 [
+                    'icon' => 'property',
+                    'name' => 'Data Kos Global',
+                    'path' => route('super-admin.properties'),
+                ],
+                [
                     'icon' => 'chat',
                     'name' => 'Chat & Pesan',
                     'path' => route('super-admin.chat'),
@@ -34,6 +39,11 @@ class MenuHelper
                     'icon' => 'settings',
                     'name' => 'Pengaturan Kos',
                     'path' => route('super-admin.settings'),
+                ],
+                [
+                    'icon' => 'settings',
+                    'name' => 'Maintenance Sistem',
+                    'path' => route('super-admin.maintenance'),
                 ],
                 [
                     'icon' => 'calendar',
@@ -66,9 +76,29 @@ class MenuHelper
                     'path' => route('admin.rooms'),
                 ],
                 [
+                    'icon' => 'forms',
+                    'name' => 'Inspeksi Kamar',
+                    'path' => route('admin.room-inspections'),
+                ],
+                [
                     'icon' => 'payment',
                     'name' => 'Pembayaran',
                     'path' => route('admin.payments'),
+                ],
+                [
+                    'icon' => 'chat',
+                    'name' => 'Chat & Pesan',
+                    'path' => route('admin.chat'),
+                ],
+                [
+                    'icon' => 'task',
+                    'name' => 'Laporan/Keluhan',
+                    'path' => route('admin.issues'),
+                ],
+                [
+                    'icon' => 'support-ticket',
+                    'name' => 'Keluar Kos',
+                    'path' => route('admin.exit-requests'),
                 ],
                 [
                     'icon' => 'forms',
@@ -101,6 +131,11 @@ class MenuHelper
                     'path' => route('owner.payments'),
                 ],
                 [
+                    'icon' => 'chat',
+                    'name' => 'Chat & Pesan',
+                    'path' => route('owner.chat'),
+                ],
+                [
                     'icon' => 'forms',
                     'name' => 'Laporan',
                     'path' => route('owner.reports'),
@@ -131,9 +166,19 @@ class MenuHelper
                     'path' => route('tenant.bills'),
                 ],
                 [
+                    'icon' => 'task',
+                    'name' => 'Keluhan',
+                    'path' => route('tenant.issues'),
+                ],
+                [
                     'icon' => 'charts',
                     'name' => 'Riwayat',
                     'path' => route('tenant.history'),
+                ],
+                [
+                    'icon' => 'support-ticket',
+                    'name' => 'Ajukan Keluar Kos',
+                    'path' => route('tenant.exit'),
                 ],
                 [
                     'icon' => 'chat',
@@ -161,9 +206,19 @@ class MenuHelper
                     'path' => route('staff.rooms'),
                 ],
                 [
+                    'icon' => 'forms',
+                    'name' => 'Cek Kondisi Kamar',
+                    'path' => route('staff.inspections'),
+                ],
+                [
                     'icon' => 'payment',
                     'name' => 'Pembayaran',
                     'path' => route('staff.payments'),
+                ],
+                [
+                    'icon' => 'task',
+                    'name' => 'Laporan/Keluhan',
+                    'path' => route('staff.issues'),
                 ],
                 [
                     'icon' => 'chat',

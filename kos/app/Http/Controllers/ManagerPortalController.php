@@ -55,19 +55,55 @@ class ManagerPortalController extends Controller
             ->limit(12)
             ->get();
 
-        return view('pages.manager.reports.index', compact('summary', 'monthly'));
+        $arrears = Payment::with(['tenant','room'])
+            ->where('status', 'unpaid')
+            ->orderByDesc('due_date')
+            ->limit(20)
+            ->get();
+
+        return view('pages.manager.reports.index', compact('summary', 'monthly', 'arrears'));
+    }
+
+    public function exportReport()
+    {
+        $rows = Payment::select(
+                DB::raw('YEAR(due_date) as year'),
+                DB::raw('MONTH(due_date) as month'),
+                DB::raw("SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as paid"),
+                DB::raw("SUM(CASE WHEN status = 'unpaid' THEN amount ELSE 0 END) as unpaid")
+            )
+            ->groupBy('year','month')
+            ->orderBy('year')->orderBy('month')
+            ->get();
+
+        $csv = implode(',', ['Year','Month','Paid','Unpaid'])."\n";
+        foreach ($rows as $r) {
+            $csv .= implode(',', [$r->year, $r->month, $r->paid ?? 0, $r->unpaid ?? 0])."\n";
+        }
+        $filename = 'manager_report_'.now()->format('Ymd_His').'.csv';
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     public function operations()
     {
         $ops = Operation::orderByDesc('created_at')->get();
-        return view('pages.manager.operations.index', compact('ops'));
+        $issueCounts = [
+            'pending' => \App\Models\IssueReport::where('status', 'pending')->count(),
+            'in_progress' => \App\Models\IssueReport::where('status', 'in_progress')->count(),
+            'done' => \App\Models\IssueReport::where('status', 'done')->count(),
+        ];
+        $latestIssues = \App\Models\IssueReport::with(['tenant','room','assignee'])
+            ->orderByDesc('created_at')->limit(10)->get();
+        return view('pages.manager.operations.index', compact('ops','issueCounts','latestIssues'));
     }
 
     public function chat(Request $request)
     {
         $contacts = \App\Models\User::where('id', '!=', auth()->id())
-            ->whereIn('role', ['admin', 'super_admin', 'staff'])
+            ->whereIn('role', ['admin', 'super_admin', 'staff', 'owner'])
             ->get();
 
         $unread = \App\Models\Message::select('sender_id', \DB::raw('COUNT(*) as c'))

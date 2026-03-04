@@ -7,6 +7,8 @@ use App\Models\Room;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\Message;
+use App\Models\IssueReport;
+use App\Models\RoomInspection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -147,5 +149,99 @@ class StaffPortalController extends Controller
         })->orderBy('created_at', 'asc')->get();
 
         return response()->json($messages);
+    }
+
+    public function issues()
+    {
+        $issues = IssueReport::with(['tenant','room','assignee'])
+            ->where('assigned_to', auth()->id())
+            ->orderByDesc('created_at')
+            ->get();
+        $rooms = Room::orderBy('number')->get();
+        return view('pages.staff.issues.index', compact('issues', 'rooms'));
+    }
+
+    public function submitIssue(Request $request)
+    {
+        $data = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'room_id' => 'nullable|exists:rooms,id',
+        ]);
+        IssueReport::create([
+            'tenant_id' => null,
+            'room_id' => $data['room_id'] ?? null,
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'status' => 'in_progress',
+            'assigned_to' => auth()->id(),
+            'reported_at' => Carbon::now(),
+        ]);
+        return redirect()->back()->with('success', 'Laporan berhasil dibuat.');
+    }
+
+    public function updateIssueStatus(Request $request, IssueReport $issue)
+    {
+        if ($issue->assigned_to !== auth()->id()) {
+            abort(403);
+        }
+        $data = $request->validate([
+            'status' => 'required|in:pending,in_progress,done',
+        ]);
+        $issue->update(['status' => $data['status']]);
+        return redirect()->back()->with('success', 'Status laporan diperbarui.');
+    }
+
+    public function destroyIssue(IssueReport $issue)
+    {
+        if ($issue->assigned_to !== auth()->id()) {
+            abort(403);
+        }
+        $issue->delete();
+        return redirect()->back()->with('success', 'Laporan dihapus.');
+    }
+
+    public function inspections()
+    {
+        $rooms = Room::orderBy('number')->get();
+        $inspections = RoomInspection::with(['room','issue'])->orderByDesc('created_at')->get();
+        return view('pages.staff.inspections.index', compact('rooms', 'inspections'));
+    }
+
+    public function storeInspection(Request $request)
+    {
+        $data = $request->validate([
+            'room_id' => 'required|exists:rooms,id',
+            'type' => 'required|in:pre_move_in,post_move_out',
+            'notes' => 'nullable|string',
+            'has_damage' => 'nullable|boolean',
+            'damage_title' => 'nullable|string|max:255',
+            'damage_description' => 'nullable|string',
+        ]);
+
+        $issueId = null;
+        if ($request->boolean('has_damage')) {
+            $issue = IssueReport::create([
+                'tenant_id' => null,
+                'room_id' => $data['room_id'],
+                'title' => $data['damage_title'] ?? 'Kerusakan kamar',
+                'description' => $data['damage_description'] ?? null,
+                'status' => 'pending',
+                'assigned_to' => null,
+                'reported_at' => Carbon::now(),
+            ]);
+            $issueId = $issue->id;
+        }
+
+        RoomInspection::create([
+            'room_id' => $data['room_id'],
+            'inspector_id' => auth()->id(),
+            'type' => $data['type'],
+            'notes' => $data['notes'] ?? null,
+            'issue_report_id' => $issueId,
+            'inspected_at' => Carbon::now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Inspeksi dicatat.');
     }
 }

@@ -61,7 +61,7 @@
         <a href="/" class="flex items-center gap-3">
             <img src="/images/logo/logo-icon.svg" alt="Logo" width="32" height="32" />
             <span x-show="$store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen"
-                class="text-[28px] font-bold text-slate-800 dark:text-white tracking-tight">TailAdmin</span>
+                class="text-[28px] font-bold text-slate-800 dark:text-white tracking-tight">{{ \App\Models\Setting::getValue('app_name', 'Kos Management System') }}</span>
         </a>
     </div>
 

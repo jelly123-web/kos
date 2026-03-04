@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\RoomRequest;
 use App\Models\Room;
 use Illuminate\Http\Request;
+use App\Models\IssueReport;
+use App\Models\RoomInspection;
 
 class RoomController extends Controller
 {
@@ -82,5 +84,41 @@ class RoomController extends Controller
         }
         $requestModel->update(['status' => 'rejected']);
         return redirect()->back()->with('success', 'Permintaan kamar ditolak.');
+    }
+
+    public function inspections()
+    {
+        $rooms = Room::orderBy('number')->get();
+        $tenantReports = IssueReport::with(['tenant','room','assignee'])
+            ->orderByDesc('created_at')
+            ->limit(30)->get();
+        $inspections = RoomInspection::with(['room','issue'])
+            ->orderByDesc('created_at')
+            ->limit(30)->get();
+        return view('pages.admin.rooms.inspections', compact('rooms', 'tenantReports', 'inspections'));
+    }
+
+    public function setCondition(Request $request, Room $room)
+    {
+        $data = $request->validate([
+            'condition' => 'required|in:good,damaged,needs_repair',
+        ]);
+        $room->update(['condition' => $data['condition']]);
+        return redirect()->back()->with('success', 'Kondisi kamar diperbarui.');
+    }
+
+    public function setStatus(Request $request, Room $room)
+    {
+        $data = $request->validate([
+            'status' => 'required|in:empty,occupied,maintenance',
+        ]);
+        $room->update(['status' => $data['status']]);
+        return redirect()->back()->with('success', 'Status kamar diperbarui.');
+    }
+
+    public function markReady(Room $room)
+    {
+        $room->update(['status' => 'empty', 'condition' => 'good']);
+        return redirect()->back()->with('success', 'Kamar diset sebagai siap dipakai lagi.');
     }
 }

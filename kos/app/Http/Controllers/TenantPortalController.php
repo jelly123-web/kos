@@ -8,6 +8,8 @@ use App\Models\Room;
 use App\Models\User;
 use App\Models\Message;
 use App\Models\RoomRequest;
+use App\Models\ExitRequest;
+use App\Models\IssueReport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Carbon;
@@ -104,11 +106,67 @@ class TenantPortalController extends Controller
         return redirect()->back()->with('success', 'Permintaan kamar terkirim, menunggu konfirmasi admin.');
     }
 
-    public function bills()
+    public function bills(Request $request)
     {
         $tenant = $this->me();
-        $payments = Payment::where('tenant_id', $tenant?->id)->orderByDesc('due_date')->get();
-        return view('pages.tenant.bills.index', compact('tenant', 'payments'));
+        if ($tenant && $tenant->room_id) {
+            $room = Room::find($tenant->room_id);
+            $now = Carbon::now();
+            $existsThisMonth = Payment::where('tenant_id', $tenant->id)
+                ->where('category', 'rent')
+                ->whereMonth('due_date', $now->month)
+                ->whereYear('due_date', $now->year)
+                ->exists();
+            if (!$existsThisMonth) {
+                Payment::create([
+                    'tenant_id' => $tenant->id,
+                    'room_id' => $room?->id,
+                    'amount' => $room?->price ?? 0,
+                    'category' => 'rent',
+                    'due_date' => $now->endOfMonth()->toDateString(),
+                    'status' => 'unpaid',
+                ]);
+            }
+            $elecExists = Payment::where('tenant_id', $tenant->id)
+                ->where('category', 'electricity')
+                ->whereMonth('due_date', $now->month)
+                ->whereYear('due_date', $now->year)
+                ->exists();
+            if (!$elecExists) {
+                $electricityFee = (int) \App\Models\Setting::getValue('electricity_fee', 100000);
+                Payment::create([
+                    'tenant_id' => $tenant->id,
+                    'room_id' => $room?->id,
+                    'amount' => $electricityFee,
+                    'category' => 'electricity',
+                    'due_date' => $now->endOfMonth()->toDateString(),
+                    'status' => 'unpaid',
+                ]);
+            }
+            $waterExists = Payment::where('tenant_id', $tenant->id)
+                ->where('category', 'water')
+                ->whereMonth('due_date', $now->month)
+                ->whereYear('due_date', $now->year)
+                ->exists();
+            if (!$waterExists) {
+                $waterFee = (int) \App\Models\Setting::getValue('water_fee', 50000);
+                Payment::create([
+                    'tenant_id' => $tenant->id,
+                    'room_id' => $room?->id,
+                    'amount' => $waterFee,
+                    'category' => 'water',
+                    'due_date' => $now->endOfMonth()->toDateString(),
+                    'status' => 'unpaid',
+                ]);
+            }
+        }
+        $category = $request->query('category');
+        $paymentsQuery = Payment::where('tenant_id', $tenant?->id);
+        if (in_array($category, ['rent','electricity','water'], true)) {
+            $paymentsQuery->where('category', $category);
+        }
+        $payments = $paymentsQuery->orderByDesc('due_date')->get();
+        return view('pages.tenant.bills.index', compact('tenant', 'payments', 'category'));
     }
 
     public function uploadProof(Request $request, Payment $payment)
@@ -123,6 +181,73 @@ class TenantPortalController extends Controller
             'paid_at' => Carbon::now(),
         ]);
         return redirect()->back()->with('success', 'Bukti pembayaran diunggah.');
+    }
+
+    public function payBill(Request $request, Payment $payment)
+    {
+        $tenant = $this->me();
+        if (!$tenant || $payment->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+        if ($payment->status === 'paid') {
+            return redirect()->back()->with('info', 'Tagihan ini sudah lunas.');
+        }
+        $payment->update([
+            'status' => 'paid',
+            'paid_at' => Carbon::now(),
+        ]);
+        if ($tenant->room_id) {
+            $room = Room::find($tenant->room_id);
+            if ($room) {
+                if ($payment->category === 'electricity') {
+                    $stillUnpaid = Payment::where('tenant_id', $tenant->id)
+                        ->where('category', 'electricity')
+                        ->where('status', 'unpaid')
+                        ->exists();
+                    if (!$stillUnpaid) {
+                        $room->update(['electricity_status' => 'on']);
+                    }
+                }
+                if ($payment->category === 'water') {
+                    $stillUnpaid = Payment::where('tenant_id', $tenant->id)
+                        ->where('category', 'water')
+                        ->where('status', 'unpaid')
+                        ->exists();
+                    if (!$stillUnpaid) {
+                        $room->update(['water_status' => 'on']);
+                    }
+                }
+            }
+        }
+        return redirect()->back()->with('success', 'Pembayaran berhasil. Status tagihan sudah lunas.');
+    }
+
+    public function issues()
+    {
+        $tenant = $this->me();
+        $issues = IssueReport::where('tenant_id', $tenant?->id)->orderByDesc('created_at')->get();
+        return view('pages.tenant.issues.index', compact('tenant', 'issues'));
+    }
+
+    public function submitIssue(Request $request)
+    {
+        $tenant = $this->me();
+        $data = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+        if (!$tenant || !$tenant->room_id) {
+            return redirect()->back()->withErrors(['title' => 'Anda belum terhubung ke kamar. Ajukan kamar terlebih dahulu sebelum mengirim keluhan.']);
+        }
+        IssueReport::create([
+            'tenant_id' => $tenant?->id,
+            'room_id' => $tenant?->room_id,
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'status' => 'pending',
+            'reported_at' => Carbon::now(),
+        ]);
+        return redirect()->back()->with('success', 'Keluhan berhasil dikirim. Admin akan menindaklanjuti.');
     }
 
     public function history()
@@ -193,5 +318,30 @@ class TenantPortalController extends Controller
         })->orderBy('created_at', 'asc')->get();
 
         return response()->json($messages);
+    }
+
+    public function exitIndex()
+    {
+        $tenant = $this->me();
+        $latest = ExitRequest::where('tenant_id', $tenant?->id)->orderByDesc('created_at')->first();
+        return view('pages.tenant.exit.index', compact('tenant', 'latest'));
+    }
+
+    public function submitExit(Request $request)
+    {
+        $tenant = $this->me();
+        $data = $request->validate([
+            'reason' => 'nullable|string|max:2000',
+        ]);
+        $hasPending = ExitRequest::where('tenant_id', $tenant->id)->where('status', 'pending')->exists();
+        if ($hasPending) {
+            return redirect()->back()->with('info', 'Anda sudah memiliki pengajuan keluar yang sedang diproses.');
+        }
+        ExitRequest::create([
+            'tenant_id' => $tenant->id,
+            'reason' => $data['reason'] ?? null,
+            'status' => 'pending',
+        ]);
+        return redirect()->back()->with('success', 'Pengajuan keluar kos terkirim. Menunggu persetujuan admin.');
     }
 }

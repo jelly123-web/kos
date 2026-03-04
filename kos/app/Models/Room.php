@@ -14,6 +14,7 @@ class Room extends Model
         'name',
         'price',
         'status',
+        'condition',
         'electricity_status',
         'water_status',
         'facilities',
