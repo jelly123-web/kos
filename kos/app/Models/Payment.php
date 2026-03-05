@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\SoftDeleteWithMeta;
 
 class Payment extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeleteWithMeta;
 
     protected $fillable = [
         'tenant_id',
@@ -18,6 +19,7 @@ class Payment extends Model
         'paid_at',
         'status',
         'proof_path',
+        'deleted','deleted_by','deleted_ip',
     ];
 
     protected function casts(): array

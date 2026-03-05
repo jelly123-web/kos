@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\SoftDeleteWithMeta;
 
 class Operation extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeleteWithMeta;
 
     protected $fillable = [
         'title',
@@ -16,6 +17,7 @@ class Operation extends Model
         'status',
         'reported',
         'created_by',
+        'deleted','deleted_by','deleted_ip',
     ];
 
     protected function casts(): array

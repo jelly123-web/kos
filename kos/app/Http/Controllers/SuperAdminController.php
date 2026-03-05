@@ -81,6 +81,8 @@ class SuperAdminController extends Controller
         $settings = [
             'app_name' => Setting::getValue('app_name', 'Kos Management System'),
             'app_slogan' => Setting::getValue('app_slogan', 'Kelola Kos Jadi Lebih Mudah'),
+            'primary_color' => Setting::getValue('primary_color', '#465FFF'),
+            'app_logo' => Setting::getValue('app_logo', null),
             'app_rules' => Setting::getValue('app_rules', "1. Pembayaran maksimal tanggal 5 setiap bulan.\n2. Tamu dilarang menginap tanpa ijin pengelola.\n3. Menjaga kebersihan dan ketenangan area kos."),
             'deposit_fee' => Setting::getValue('deposit_fee', '500000'),
             'late_fee_percent' => Setting::getValue('late_fee_percent', '5'),
@@ -98,6 +100,8 @@ class SuperAdminController extends Controller
         $data = $request->validate([
             'app_name' => 'required|string|max:255',
             'app_slogan' => 'nullable|string|max:255',
+            'primary_color' => ['nullable', 'regex:/^#?[0-9A-Fa-f]{6}$/'],
+            'app_logo' => 'nullable|mimes:jpg,jpeg,png,bmp,gif,svg,webp,ico|max:2048',
             'app_rules' => 'nullable|string',
             'deposit_fee' => 'required|numeric|min:0',
             'late_fee_percent' => 'required|numeric|min:0|max:100',
@@ -106,6 +110,25 @@ class SuperAdminController extends Controller
             'security_session_timeout' => 'required|numeric|min:1',
             'security_max_attempts' => 'required|numeric|min:1',
         ]);
+
+        if ($request->hasFile('app_logo')) {
+            $old = Setting::getValue('app_logo');
+            if ($old && \Illuminate\Support\Facades\Storage::disk('public')->exists($old)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($old);
+            }
+            $path = $request->file('app_logo')->store('settings', 'public');
+            Setting::setValue('app_logo', $path);
+        }
+
+        if (!empty($data['primary_color'])) {
+            $color = $data['primary_color'];
+            if ($color[0] !== '#') {
+                $color = '#'.$color;
+            }
+            Setting::setValue('primary_color', strtoupper($color));
+        }
+
+        unset($data['app_logo'], $data['primary_color']);
 
         foreach ($data as $key => $value) {
             Setting::setValue($key, $value);
@@ -116,7 +139,10 @@ class SuperAdminController extends Controller
 
     public function activityLog()
     {
-        return view('pages.super-admin.activity-log');
+        $logs = \App\Models\ActivityLog::with('user')
+            ->orderByDesc('created_at')
+            ->limit(300)->get();
+        return view('pages.super-admin.activity-log', compact('logs'));
     }
 
     public function maintenance()
@@ -130,6 +156,18 @@ class SuperAdminController extends Controller
             }
         } catch (\Throwable $e) {}
         return view('pages.super-admin.maintenance.index', compact('logPreview'));
+    }
+
+    public function trackGeo(Request $request)
+    {
+        $data = $request->validate([
+            'lat' => 'nullable|numeric',
+            'lng' => 'nullable|numeric',
+        ]);
+        if (isset($data['lat'], $data['lng'])) {
+            session(['geo.lat' => $data['lat'], 'geo.lng' => $data['lng']]);
+        }
+        return response()->json(['ok' => true]);
     }
 
     public function backup()
@@ -188,6 +226,77 @@ class SuperAdminController extends Controller
     public function systemUpdate()
     {
         return redirect()->back()->with('success', 'Sistem diperbarui (placeholder).');
+    }
+
+    public function recycleBin()
+    {
+        $models = [
+            'users' => \App\Models\User::class,
+            'properties' => \App\Models\Property::class,
+            'rooms' => \App\Models\Room::class,
+            'tenants' => \App\Models\Tenant::class,
+            'payments' => \App\Models\Payment::class,
+            'issues' => \App\Models\IssueReport::class,
+            'inspections' => \App\Models\RoomInspection::class,
+            'room_requests' => \App\Models\RoomRequest::class,
+            'messages' => \App\Models\Message::class,
+            'operations' => \App\Models\Operation::class,
+            'role_permissions' => \App\Models\RolePermission::class,
+            'settings' => \App\Models\Setting::class,
+            'exit_requests' => \App\Models\ExitRequest::class,
+        ];
+
+        $entries = collect();
+        foreach ($models as $key => $cls) {
+            try {
+                $rows = $cls::onlyTrashed()->orderByDesc('deleted_at')->get();
+                foreach ($rows as $row) {
+                    $label = null;
+                    foreach (['name','title','number','username','key'] as $f) {
+                        if (isset($row->$f) && $row->$f) { $label = $row->$f; break; }
+                    }
+                    if (!$label) $label = 'ID '.$row->id;
+                    $entries->push([
+                        'model' => $key,
+                        'id' => $row->id,
+                        'label' => $label,
+                        'deleted_by' => $row->deleted_by ?? null,
+                        'deleted_ip' => $row->deleted_ip ?? null,
+                        'deleted_at' => $row->deleted_at,
+                    ]);
+                }
+            } catch (\Throwable $e) {}
+        }
+        $entries = $entries->sortByDesc('deleted_at')->values();
+        return view('pages.super-admin.recycle-bin', compact('entries'));
+    }
+
+    public function restoreRecord(Request $request, string $model, int $id)
+    {
+        $map = [
+            'users' => \App\Models\User::class,
+            'properties' => \App\Models\Property::class,
+            'rooms' => \App\Models\Room::class,
+            'tenants' => \App\Models\Tenant::class,
+            'payments' => \App\Models\Payment::class,
+            'issues' => \App\Models\IssueReport::class,
+            'inspections' => \App\Models\RoomInspection::class,
+            'room_requests' => \App\Models\RoomRequest::class,
+            'messages' => \App\Models\Message::class,
+            'operations' => \App\Models\Operation::class,
+            'role_permissions' => \App\Models\RolePermission::class,
+            'settings' => \App\Models\Setting::class,
+            'exit_requests' => \App\Models\ExitRequest::class,
+        ];
+        abort_unless(isset($map[$model]), 404);
+        $cls = $map[$model];
+        try {
+            $rec = $cls::withTrashed()->findOrFail($id);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Model tidak mendukung restore.');
+        }
+        $rec->restore();
+        return redirect()->back()->with('success', "Data $model #$id berhasil direstore.");
     }
 
     public function reports()

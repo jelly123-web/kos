@@ -13,6 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'permcheck' => \App\Http\Middleware\EnsurePermission::class,
+            'activitylog' => \App\Http\Middleware\ActivityLogger::class,
+        ]);
+        $middleware->appendToGroup('web', [
+            \App\Http\Middleware\ActivityLogger::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

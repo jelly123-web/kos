@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\SoftDeleteWithMeta;
 
 class IssueReport extends Model
 {
+    use SoftDeleteWithMeta;
     protected $fillable = [
         'tenant_id',
         'room_id',
@@ -14,6 +16,7 @@ class IssueReport extends Model
         'status',
         'assigned_to',
         'reported_at',
+        'deleted','deleted_by','deleted_ip',
     ];
 
     protected function casts(): array
@@ -38,4 +41,3 @@ class IssueReport extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 }
-

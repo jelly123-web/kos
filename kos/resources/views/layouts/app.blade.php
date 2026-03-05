@@ -10,13 +10,14 @@
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    @php $primary = \App\Models\Setting::getValue('primary_color', '#465FFF'); @endphp
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        primary: '#465FFF',
+                        primary: '{{ $primary }}',
                         'bg-gray': '#F9FAFB',
                         brand: {
                             50: '#EEF2FF',
@@ -24,8 +25,8 @@
                             200: '#C7D2FE',
                             300: '#A5B4FC',
                             400: '#818CF8',
-                            500: '#465FFF',
-                            600: '#3D52DB',
+                            500: '{{ $primary }}',
+                            600: '{{ $primary }}',
                             700: '#3142B2',
                             800: '#28358E',
                             900: '#212B74',
@@ -226,6 +227,31 @@
     </div>
 
 </body>
+
+<script>
+// capture geolocation once and send to backend
+(function() {
+    const sentKey = 'geo_sent_at';
+    const last = localStorage.getItem(sentKey);
+    const need = !last || (Date.now() - parseInt(last, 10)) > 3600*1000; // 1 hour
+    if (!need) return;
+    if (!('geolocation' in navigator)) return;
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        fetch('{{ route('track.geo') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=\"csrf-token\"]').getAttribute('content')
+            },
+            body: JSON.stringify({ lat, lng })
+        }).then(() => {
+            localStorage.setItem(sentKey, String(Date.now()));
+        }).catch(() => {});
+    }, function() {}, { enableHighAccuracy: false, maximumAge: 600000, timeout: 8000 });
+})();
+</script>
 
 @stack('scripts')
 

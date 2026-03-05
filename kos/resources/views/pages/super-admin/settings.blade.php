@@ -3,7 +3,13 @@
 @section('content')
     <x-common.page-breadcrumb :pageTitle="'Pengaturan Aplikasi'" :title="'Settings'" :subtitle="'Konfigurasi sistem, biaya, dan aturan kos'" />
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" x-data="{ activeTab: 'general' }">
+    @php
+        $storedLogoPath = \App\Models\Setting::getValue('app_logo');
+        $exists = $storedLogoPath ? \Illuminate\Support\Facades\Storage::disk('public')->exists($storedLogoPath) : false;
+        $currentLogoUrl = $exists ? asset('storage/'.$storedLogoPath) : asset('/images/logo/logo-icon.svg');
+        $primaryColor = \App\Models\Setting::getValue('primary_color', '#465FFF');
+    @endphp
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" x-data="{ activeTab: 'general', logoPreview: '{{ $currentLogoUrl }}', primaryHex: '{{ $primaryColor }}' }">
         <!-- Sidebar Settings -->
         <div class="md:col-span-1 space-y-6">
             <div class="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-white/[0.03] shadow-sm overflow-hidden">
@@ -35,7 +41,7 @@
 
         <!-- Settings Form -->
         <div class="md:col-span-2 space-y-6">
-            <form action="{{ route('super-admin.settings.update') }}" method="POST">
+            <form action="{{ route('super-admin.settings.update') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 
                 @if(session('success'))
@@ -59,6 +65,26 @@
                             <div class="space-y-2">
                                 <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Slogan</label>
                                 <input type="text" name="app_slogan" value="{{ $settings['app_slogan'] }}" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:bg-slate-900 dark:border-slate-800 dark:text-white">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Logo Aplikasi</label>
+                                <div class="flex items-center gap-4">
+                                    <img x-bind:src="logoPreview" alt="Logo" class="h-10 w-10 rounded border border-slate-200 dark:border-slate-800 object-contain bg-white"
+                                         onerror="this.onerror=null;this.src='{{ asset('/images/logo/logo-icon.svg') }}';">
+                                    <input type="file" name="app_logo" accept="image/*,.ico" @change="if($event.target.files[0]){logoPreview = URL.createObjectURL($event.target.files[0]);}" class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 dark:file:bg-white/10 dark:file:text-white/80">
+                                </div>
+                                @error('app_logo')
+                                    <p class="text-xs text-red-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Warna Utama</label>
+                                <div class="flex items-center gap-3">
+                                    <input type="color" name="primary_color" x-model="primaryHex" class="h-10 w-16 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                    <input type="text" x-model="primaryHex" class="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 dark:bg-slate-900 dark:border-slate-800 dark:text-white" placeholder="#465FFF">
+                                </div>
                             </div>
                         </div>
                     </div>

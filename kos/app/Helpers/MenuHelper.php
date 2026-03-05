@@ -7,6 +7,12 @@ class MenuHelper
     public static function getMainNavItems()
     {
         $role = auth()->user()->role ?? 'guest';
+        $allows = function ($perm) use ($role) {
+            if ($role === 'super_admin') {
+                return true;
+            }
+            return \App\Models\RolePermission::allows($role, $perm);
+        };
 
         if ($role === 'super_admin') {
             return [
@@ -37,8 +43,13 @@ class MenuHelper
                 ],
                 [
                     'icon' => 'settings',
-                    'name' => 'Pengaturan Kos',
+                    'name' => 'Setting',
                     'path' => route('super-admin.settings'),
+                ],
+                [
+                    'icon' => 'tables',
+                    'name' => 'Hak Akses Menu',
+                    'path' => route('super-admin.access'),
                 ],
                 [
                     'icon' => 'settings',
@@ -50,222 +61,270 @@ class MenuHelper
                     'name' => 'Log Aktivitas',
                     'path' => route('super-admin.activity-log'),
                 ],
+                [
+                    'icon' => 'recycle',
+                    'name' => 'Recycle Bin',
+                    'path' => route('super-admin.recycle-bin'),
+                ],
             ];
         }
 
         if ($role === 'admin') {
-            return [
+            $items = [
                 [
                     'icon' => 'dashboard',
                     'name' => 'Dashboard',
                     'path' => route('admin.dashboard'),
+                    'perm' => 'admin.dashboard.view',
                 ],
                 [
                     'icon' => 'property',
                     'name' => 'Data Kos',
                     'path' => route('admin.property'),
+                    'perm' => 'admin.rooms.view',
                 ],
                 [
                     'icon' => 'users',
                     'name' => 'Penghuni',
                     'path' => route('admin.tenants'),
+                    'perm' => 'admin.tenants.view',
                 ],
                 [
                     'icon' => 'tables',
                     'name' => 'Kamar',
                     'path' => route('admin.rooms'),
+                    'perm' => 'admin.rooms.view',
                 ],
                 [
                     'icon' => 'forms',
                     'name' => 'Inspeksi Kamar',
                     'path' => route('admin.room-inspections'),
+                    'perm' => 'admin.inspections.view',
                 ],
                 [
                     'icon' => 'payment',
                     'name' => 'Pembayaran',
                     'path' => route('admin.payments'),
+                    'perm' => 'admin.payments.view',
                 ],
                 [
                     'icon' => 'chat',
                     'name' => 'Chat & Pesan',
                     'path' => route('admin.chat'),
+                    'perm' => 'admin.reports.view',
                 ],
                 [
                     'icon' => 'task',
                     'name' => 'Laporan/Keluhan',
                     'path' => route('admin.issues'),
+                    'perm' => 'admin.issues.view',
                 ],
                 [
                     'icon' => 'support-ticket',
                     'name' => 'Keluar Kos',
                     'path' => route('admin.exit-requests'),
+                    'perm' => 'admin.exit.view',
                 ],
                 [
                     'icon' => 'forms',
                     'name' => 'Laporan',
                     'path' => route('admin.reports'),
+                    'perm' => 'admin.reports.view',
                 ],
             ];
+            return array_values(array_filter($items, fn($it) => empty($it['perm']) || $allows($it['perm'])));
         }
 
         if ($role === 'owner') {
-            return [
+            $items = [
                 [
                     'icon' => 'dashboard',
                     'name' => 'Dashboard',
                     'path' => route('owner.dashboard'),
+                    'perm' => 'owner.rooms.view',
                 ],
                 [
                     'icon' => 'tables',
                     'name' => 'Data Kamar',
                     'path' => route('owner.rooms'),
+                    'perm' => 'owner.rooms.view',
                 ],
                 [
                     'icon' => 'users',
                     'name' => 'Data Penghuni',
                     'path' => route('owner.tenants'),
+                    'perm' => 'owner.tenants.view',
                 ],
                 [
                     'icon' => 'payment',
                     'name' => 'Pembayaran',
                     'path' => route('owner.payments'),
+                    'perm' => 'owner.payments.view',
                 ],
                 [
                     'icon' => 'chat',
                     'name' => 'Chat & Pesan',
                     'path' => route('owner.chat'),
+                    'perm' => 'owner.chat.view',
                 ],
                 [
                     'icon' => 'forms',
                     'name' => 'Laporan',
                     'path' => route('owner.reports'),
+                    'perm' => 'owner.reports.view',
                 ],
                 [
                     'icon' => 'settings',
                     'name' => 'Pantau Kos',
                     'path' => route('owner.monitor'),
+                    'perm' => 'owner.monitor.view',
                 ],
             ];
+            return array_values(array_filter($items, fn($it) => empty($it['perm']) || $allows($it['perm'])));
         }
 
         if ($role === 'tenant') {
-            return [
+            $items = [
                 [
                     'icon' => 'dashboard',
                     'name' => 'Dashboard',
                     'path' => route('tenant.dashboard'),
+                    'perm' => 'tenant.dashboard.view',
                 ],
                 [
                     'icon' => 'tables',
                     'name' => 'Kamar Saya',
                     'path' => route('tenant.room'),
+                    'perm' => 'tenant.room.view',
                 ],
                 [
                     'icon' => 'payment',
                     'name' => 'Tagihan',
                     'path' => route('tenant.bills'),
+                    'perm' => 'tenant.bills.view',
                 ],
                 [
                     'icon' => 'task',
                     'name' => 'Keluhan',
                     'path' => route('tenant.issues'),
+                    'perm' => 'tenant.issues.view',
                 ],
                 [
                     'icon' => 'charts',
                     'name' => 'Riwayat',
                     'path' => route('tenant.history'),
+                    'perm' => 'tenant.history.view',
                 ],
                 [
                     'icon' => 'support-ticket',
                     'name' => 'Ajukan Keluar Kos',
                     'path' => route('tenant.exit'),
+                    'perm' => 'tenant.exit.view',
                 ],
                 [
                     'icon' => 'chat',
                     'name' => 'Chat',
                     'path' => route('tenant.chat'),
+                    'perm' => 'tenant.chat.view',
                 ],
             ];
+            return array_values(array_filter($items, fn($it) => empty($it['perm']) || $allows($it['perm'])));
         }
 
         if ($role === 'staff') {
-            return [
+            $items = [
                 [
                     'icon' => 'dashboard',
                     'name' => 'Dashboard',
                     'path' => route('staff.dashboard'),
+                    'perm' => 'staff.dashboard.view',
                 ],
                 [
                     'icon' => 'users',
                     'name' => 'Penghuni',
                     'path' => route('staff.tenants'),
+                    'perm' => 'staff.tenants.view',
                 ],
                 [
                     'icon' => 'tables',
                     'name' => 'Kamar',
                     'path' => route('staff.rooms'),
+                    'perm' => 'staff.rooms.view',
                 ],
                 [
                     'icon' => 'forms',
                     'name' => 'Cek Kondisi Kamar',
                     'path' => route('staff.inspections'),
+                    'perm' => 'staff.inspections.view',
                 ],
                 [
                     'icon' => 'payment',
                     'name' => 'Pembayaran',
                     'path' => route('staff.payments'),
+                    'perm' => 'staff.payments.view',
                 ],
                 [
                     'icon' => 'task',
                     'name' => 'Laporan/Keluhan',
                     'path' => route('staff.issues'),
+                    'perm' => 'staff.issues.view',
                 ],
                 [
                     'icon' => 'chat',
                     'name' => 'Chat',
                     'path' => route('staff.chat'),
+                    'perm' => 'staff.chat.view',
                 ],
             ];
+            return array_values(array_filter($items, fn($it) => empty($it['perm']) || $allows($it['perm'])));
         }
 
         if ($role === 'manager') {
-            return [
+            $items = [
                 [
                     'icon' => 'dashboard',
                     'name' => 'Dashboard',
                     'path' => route('manager.dashboard'),
+                    'perm' => 'manager.dashboard.view',
                 ],
                 [
                     'icon' => 'tables',
                     'name' => 'Data Kamar',
                     'path' => route('manager.rooms'),
+                    'perm' => 'manager.rooms.view',
                 ],
                 [
                     'icon' => 'users',
                     'name' => 'Data Penghuni',
                     'path' => route('manager.tenants'),
+                    'perm' => 'manager.tenants.view',
                 ],
                 [
                     'icon' => 'payment',
                     'name' => 'Pembayaran',
                     'path' => route('manager.payments'),
+                    'perm' => 'manager.payments.view',
                 ],
                 [
                     'icon' => 'forms',
                     'name' => 'Laporan',
                     'path' => route('manager.reports'),
+                    'perm' => 'manager.reports.view',
                 ],
                 [
                     'icon' => 'task',
                     'name' => 'Operasional',
                     'path' => route('manager.operations'),
+                    'perm' => 'manager.operations.view',
                 ],
                 [
                     'icon' => 'chat',
                     'name' => 'Chat',
                     'path' => route('manager.chat'),
+                    'perm' => 'manager.chat.view',
                 ],
             ];
+            return array_values(array_filter($items, fn($it) => empty($it['perm']) || $allows($it['perm'])));
         }
 
         return [

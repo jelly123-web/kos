@@ -74,8 +74,9 @@
                         <p class="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">Super Admin</p>
                     </div>
                     <div class="relative">
+                        @php $pc = ltrim(\App\Models\Setting::getValue('primary_color', '#465FFF'), '#'); @endphp
                         <img class="h-10 w-10 rounded-full object-cover border border-slate-100 dark:border-slate-800" 
-                            src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}&background=465FFF&color=fff" alt="User">
+                            src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}&background={{ $pc }}&color=fff" alt="User">
                         <span class="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-white dark:ring-slate-900"></span>
                     </div>
                     <svg class="w-4 h-4 text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">

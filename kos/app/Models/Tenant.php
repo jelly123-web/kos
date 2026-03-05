@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\SoftDeleteWithMeta;
 
 class Tenant extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeleteWithMeta;
 
     protected $fillable = [
         'name',
@@ -17,6 +18,7 @@ class Tenant extends Model
         'status',
         'start_date',
         'end_date',
+        'deleted','deleted_by','deleted_ip',
     ];
 
     public function room()

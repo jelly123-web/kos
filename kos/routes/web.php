@@ -43,11 +43,19 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->group(fu
     Route::post('/chat/send', [SuperAdminController::class, 'sendMessage'])->name('super-admin.chat.send');
     Route::get('/chat/fetch/{user}', [SuperAdminController::class, 'fetchMessages'])->name('super-admin.chat.fetch');
 
+    // Recycle Bin
+    Route::get('/recycle-bin', [SuperAdminController::class, 'recycleBin'])->name('super-admin.recycle-bin');
+    Route::post('/recycle-bin/{model}/{id}/restore', [SuperAdminController::class, 'restoreRecord'])->name('super-admin.recycle-bin.restore');
+
     // Global properties management
     Route::get('/properties', [\App\Http\Controllers\SuperAdmin\PropertyController::class, 'index'])->name('super-admin.properties');
     Route::post('/properties', [\App\Http\Controllers\SuperAdmin\PropertyController::class, 'store'])->name('super-admin.properties.store');
     Route::post('/properties/{property}', [\App\Http\Controllers\SuperAdmin\PropertyController::class, 'update'])->name('super-admin.properties.update');
     Route::delete('/properties/{property}', [\App\Http\Controllers\SuperAdmin\PropertyController::class, 'destroy'])->name('super-admin.properties.destroy');
+
+    // Access matrix
+    Route::get('/access', [\App\Http\Controllers\SuperAdmin\AccessController::class, 'index'])->name('super-admin.access');
+    Route::post('/access', [\App\Http\Controllers\SuperAdmin\AccessController::class, 'save'])->name('super-admin.access.save');
 
     // Maintenance
     Route::get('/maintenance', [SuperAdminController::class, 'maintenance'])->name('super-admin.maintenance');
@@ -56,7 +64,10 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->group(fu
     Route::post('/maintenance/update', [SuperAdminController::class, 'systemUpdate'])->name('super-admin.maintenance.update');
 });
 
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
+// Track geolocation (session) for logging
+Route::post('/track/geo', [\App\Http\Controllers\SuperAdminController::class, 'trackGeo'])->name('track.geo')->middleware('auth');
+
+Route::middleware(['auth', 'permcheck', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', function () {
         return view('pages.dashboard.ecommerce');
     })->name('admin.dashboard');
@@ -102,7 +113,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::post('/room-requests/{requestModel}/reject', [\App\Http\Controllers\Admin\RoomController::class, 'rejectRequest'])->name('admin.room-requests.reject');
 });
 
-Route::middleware(['auth', 'role:owner'])->prefix('owner')->group(function () {
+Route::middleware(['auth', 'permcheck', 'role:owner'])->prefix('owner')->group(function () {
     Route::get('/dashboard', function () {
         return view('pages.dashboard.ecommerce');
     })->name('owner.dashboard');
@@ -118,7 +129,7 @@ Route::middleware(['auth', 'role:owner'])->prefix('owner')->group(function () {
     Route::get('/chat/fetch/{user}', [\App\Http\Controllers\OwnerController::class, 'fetchMessages'])->name('owner.chat.fetch');
 });
 
-Route::middleware(['auth', 'role:tenant'])->prefix('tenant')->group(function () {
+Route::middleware(['auth', 'permcheck', 'role:tenant'])->prefix('tenant')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\TenantPortalController::class, 'dashboard'])->name('tenant.dashboard');
     Route::get('/room', [\App\Http\Controllers\TenantPortalController::class, 'room'])->name('tenant.room');
     Route::post('/request-room', [\App\Http\Controllers\TenantPortalController::class, 'requestRoom'])->name('tenant.request-room');
@@ -134,7 +145,7 @@ Route::middleware(['auth', 'role:tenant'])->prefix('tenant')->group(function () 
     Route::get('/issues', [\App\Http\Controllers\TenantPortalController::class, 'issues'])->name('tenant.issues');
     Route::post('/issues', [\App\Http\Controllers\TenantPortalController::class, 'submitIssue'])->name('tenant.issues.submit');
 });
-Route::middleware(['auth', 'role:staff'])->prefix('staff')->group(function () {
+Route::middleware(['auth', 'permcheck', 'role:staff'])->prefix('staff')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\StaffPortalController::class, 'dashboard'])->name('staff.dashboard');
     Route::get('/tenants', [\App\Http\Controllers\StaffPortalController::class, 'tenants'])->name('staff.tenants');
     Route::post('/tenants', [\App\Http\Controllers\StaffPortalController::class, 'storeTenant'])->name('staff.tenants.store');
@@ -152,7 +163,7 @@ Route::middleware(['auth', 'role:staff'])->prefix('staff')->group(function () {
     Route::post('/chat/send', [\App\Http\Controllers\StaffPortalController::class, 'sendMessage'])->name('staff.chat.send');
     Route::get('/chat/fetch/{user}', [\App\Http\Controllers\StaffPortalController::class, 'fetchMessages'])->name('staff.chat.fetch');
 });
-Route::middleware(['auth', 'role:manager'])->prefix('manager')->group(function () {
+Route::middleware(['auth', 'permcheck', 'role:manager'])->prefix('manager')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\ManagerPortalController::class, 'dashboard'])->name('manager.dashboard');
     Route::get('/rooms', [\App\Http\Controllers\ManagerPortalController::class, 'rooms'])->name('manager.rooms');
     Route::get('/tenants', [\App\Http\Controllers\ManagerPortalController::class, 'tenants'])->name('manager.tenants');

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\SoftDeleteWithMeta;
 
 class Room extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeleteWithMeta;
 
     protected $fillable = [
         'number',
@@ -19,6 +20,7 @@ class Room extends Model
         'water_status',
         'facilities',
         'property_id',
+        'deleted','deleted_by','deleted_ip',
     ];
 
     public function property()

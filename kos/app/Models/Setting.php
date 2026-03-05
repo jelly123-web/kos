@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\SoftDeleteWithMeta;
 
 class Setting extends Model
 {
+    use SoftDeleteWithMeta;
     protected $fillable = ['key', 'value'];
 
     public static function getValue($key, $default = null)
